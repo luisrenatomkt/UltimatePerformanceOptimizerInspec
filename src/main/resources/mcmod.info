@@ -1,0 +1,8 @@
+[{
+  "modid": "upo",
+  "name": "Ultimate Performance Optimizer",
+  "description": "Client-side performance optimizer. Runs fully in the background; all UI is optional.",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "authorList": ["UPO"]
+}]
