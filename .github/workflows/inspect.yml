@@ -1,0 +1,37 @@
+name: Inspect Minecraft sources
+# Manual workflow. Decompiles Minecraft 1.8.9 (deobfuscated) and exports only the classes
+# needed to write bytecode-accurate patches, as the artifact "minecraft-key-sources".
+on:
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '2.14.1'
+      - name: Decompile
+        run: gradle setupDecompWorkspace --stacktrace
+      - name: Extract key classes
+        if: always()
+        run: |
+          mkdir -p out/src
+          find ~/.gradle -name '*.jar' > out/jar-list.txt || true
+          WANTED="net/minecraft/world/World.java net/minecraft/world/chunk/Chunk.java net/minecraft/client/renderer/RenderGlobal.java net/minecraft/client/renderer/EntityRenderer.java net/minecraft/client/renderer/chunk/ChunkRenderDispatcher.java net/minecraft/client/renderer/entity/RenderManager.java net/minecraft/client/particle/EffectRenderer.java net/minecraft/client/renderer/texture/TextureManager.java"
+          while read -r jar; do
+            if unzip -l "$jar" 2>/dev/null | grep -q 'net/minecraft/world/World.java'; then
+              echo "Source jar found: $jar" | tee -a out/found.txt
+              unzip -o -q "$jar" $WANTED -d out/src || true
+            fi
+          done < out/jar-list.txt
+          find out/src -name '*.java' | tee -a out/found.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: minecraft-key-sources
+          path: out/
